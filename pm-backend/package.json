@@ -1,0 +1,14 @@
+{
+  "name": "pm-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Decentralized PM System",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "@hyperledger/fabric-gateway": "^1.7.1",
+    "express": "^5.2.1"
+  }
+}

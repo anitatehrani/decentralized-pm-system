@@ -1,0 +1,12 @@
+{
+  "name": "pm-chaincode",
+  "version": "1.0.0",
+  "description": "Project Management Chaincode for Hyperledger Fabric",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "fabric-shim": "^2.2.2"
+  }
+}

@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root,
+:root[data-theme='dark'] {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1e2229;
+  --border: #2a2f38;
+  --text: #e8eaed;
+  --text-dim: #9aa0ab;
+  --text-faint: #5c6370;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --radius: 10px;
+  --overlay: rgba(255,255,255,0.06);
+  --toast-success-bg: rgba(24,32,26,0.95);
+  --toast-error-bg: rgba(35,20,20,0.95);
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #f1f2f5;
+  --border: #e1e3e8;
+  --text: #1a1d23;
+  --text-dim: #5b6270;
+  --text-faint: #9096a2;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --success: #16a34a;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --radius: 10px;
+  --overlay: rgba(0,0,0,0.05);
+  --toast-success-bg: #ffffff;
+  --toast-error-bg: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+code, .mono { font-family: 'JetBrains Mono', monospace; }
