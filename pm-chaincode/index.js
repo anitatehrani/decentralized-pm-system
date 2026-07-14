@@ -31,6 +31,8 @@ const PMChaincode = class {
         if (fcn === 'assignTask')        return this.assignTask(stub, params);
         if (fcn === 'updateTaskStatus')  return this.updateTaskStatus(stub, params);
         if (fcn === 'updateTaskMeta')    return this.updateTaskMeta(stub, params);
+        if (fcn === 'archiveTask')       return this.archiveTask(stub, params);
+        if (fcn === 'addComment')        return this.addComment(stub, params);
         if (fcn === 'getTaskHistory')    return this.getTaskHistory(stub, params);
 
         // File functions
@@ -53,7 +55,7 @@ const PMChaincode = class {
         const project = {
             docType: 'project',
             projectId, name, description, ownerId,
-            members: [ownerId],
+            members: [{ id: ownerId, role: 'owner' }],
             status: 'active'
         };
 
@@ -69,16 +71,19 @@ const PMChaincode = class {
     }
 
     async addProjectMember(stub, params) {
-        if (params.length !== 2) return shim.error('Expected: projectId, memberId');
-        const [projectId, memberId] = params;
+        if (params.length !== 3) return shim.error('Expected: projectId, memberId, role');
+        const [projectId, memberId, role] = params;
+
+        const validRoles = ['owner', 'admin', 'contributor'];
+        if (!validRoles.includes(role)) return shim.error(`Role must be one of: owner, admin, contributor`);
 
         const data = await stub.getState(projectKey(projectId));
         if (!data || data.length === 0) return shim.error(`Project ${projectId} does not exist`);
 
         const project = JSON.parse(data.toString());
-        if (project.members.includes(memberId)) return shim.error(`Member ${memberId} already in project`);
+        if (project.members.some(m => m.id === memberId)) return shim.error(`Member ${memberId} already in project`);
 
-        project.members.push(memberId);
+        project.members.push({ id: memberId, role });
         await stub.putState(projectKey(projectId), Buffer.from(JSON.stringify(project)));
         return shim.success(Buffer.from(JSON.stringify(project)));
     }
@@ -119,8 +124,8 @@ const PMChaincode = class {
     // ─────────────────────────────────────────────
 
     async createTask(stub, params) {
-        if (params.length !== 5) return shim.error('Expected: taskId, projectId, title, description, priority');
-        const [taskId, projectId, title, description, priority] = params;
+        if (params.length !== 6) return shim.error('Expected: taskId, projectId, title, description, priority, dueDate');
+        const [taskId, projectId, title, description, priority, dueDate] = params;
 
         // Verify project exists
         const projectData = await stub.getState(projectKey(projectId));
@@ -142,9 +147,12 @@ const PMChaincode = class {
             docType: 'task',
             taskId, projectId, title, description,
             priority,
+            dueDate: dueDate || '',
             status: 'todo',
             assigneeId: null,
-            attachments: []
+            archived: false,
+            attachments: [],
+            comments: []
         };
 
         await stub.putState(taskKey(taskId), Buffer.from(JSON.stringify(task)));
@@ -171,7 +179,7 @@ const PMChaincode = class {
         // Verify assignee is a member of the project
         const projectData = await stub.getState(projectKey(task.projectId));
         const project = JSON.parse(projectData.toString());
-        if (!project.members.includes(assigneeId)) {
+        if (!project.members.some(m => m.id === assigneeId)) {
             return shim.error(`User ${assigneeId} is not a member of project ${task.projectId}`);
         }
 
@@ -217,9 +225,9 @@ const PMChaincode = class {
         if (params.length !== 3) return shim.error('Expected: taskId, field, value');
         const [taskId, field, value] = params;
 
-        const editableFields = ['title', 'description', 'priority'];
+        const editableFields = ['title', 'description', 'priority', 'dueDate'];
         if (!editableFields.includes(field)) {
-            return shim.error(`Field must be one of: title, description, priority`);
+            return shim.error(`Field must be one of: title, description, priority, dueDate`);
         }
 
         if (field === 'priority') {
@@ -236,6 +244,40 @@ const PMChaincode = class {
         if (task.status === 'done') return shim.error(`Cannot edit a completed task`);
 
         task[field] = value;
+        await stub.putState(taskKey(taskId), Buffer.from(JSON.stringify(task)));
+        return shim.success(Buffer.from(JSON.stringify(task)));
+    }
+
+    async archiveTask(stub, params) {
+        // A ledger can't truly delete history, so "deleting" a task means
+        // marking it archived — it drops off the active board but its full
+        // history remains permanently on-chain, same pattern as archiveProject.
+        if (params.length !== 1) return shim.error('Expected: taskId');
+        const data = await stub.getState(taskKey(params[0]));
+        if (!data || data.length === 0) return shim.error(`Task ${params[0]} does not exist`);
+
+        const task = JSON.parse(data.toString());
+        if (task.archived) return shim.error(`Task ${params[0]} is already archived`);
+
+        task.archived = true;
+        await stub.putState(taskKey(params[0]), Buffer.from(JSON.stringify(task)));
+        return shim.success(Buffer.from(JSON.stringify(task)));
+    }
+
+    async addComment(stub, params) {
+        if (params.length !== 3) return shim.error('Expected: taskId, authorId, text');
+        const [taskId, authorId, text] = params;
+        if (!text || !text.trim()) return shim.error('Comment text cannot be empty');
+
+        const data = await stub.getState(taskKey(taskId));
+        if (!data || data.length === 0) return shim.error(`Task ${taskId} does not exist`);
+
+        const task = JSON.parse(data.toString());
+        // No timestamp is generated here (each peer would compute a different
+        // one, breaking endorsement) — comment order is recovered from the
+        // audit trail's transaction sequence instead, same as everywhere else.
+        if (!task.comments) task.comments = [];
+        task.comments.push({ authorId, text });
         await stub.putState(taskKey(taskId), Buffer.from(JSON.stringify(task)));
         return shim.success(Buffer.from(JSON.stringify(task)));
     }

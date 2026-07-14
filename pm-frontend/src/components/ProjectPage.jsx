@@ -1,6 +1,18 @@
+// Old (pre-role) projects stored members as plain ID strings; new ones store
+// {id, role}. This tolerates either shape so past data doesn't crash the UI.
+function memberId(m) { return typeof m === 'string' ? m : m.id }
+function memberRole(m) { return typeof m === 'string' ? null : m.role }
+
+const AVATAR_PALETTE = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#3b82f6', '#a855f7', '#22c55e', '#ef4444']
+function avatarColor(id) {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length]
+}
+
 function ProjectPage({
   selectedProject, isArchived, archiveProject,
-  newMember, setNewMember, addMember,
+  newMember, setNewMember, newMemberRole, setNewMemberRole, addMember,
   loadProjectHistory, loadingProjHistory, showProjectHistory, projectHistory,
   nameMap, displayName, setDisplayName,
   goTo
@@ -24,9 +36,9 @@ function ProjectPage({
       {isArchived && <div className="archived-banner">📦 This project is archived — read-only</div>}
 
       <p className="preview-desc">{selectedProject.description}</p>
-      <div className="preview-meta">
-        <span>Owner <b>{displayName(selectedProject.ownerId)}</b></span>
-        <span>Project ID <b className="mono">{selectedProject.projectId}</b></span>
+      <div className="preview-meta-chips">
+        <span className="meta-chip">Owner <b>{displayName(selectedProject.ownerId)}</b></span>
+        <span className="meta-chip">Project ID <b className="mono">{selectedProject.projectId}</b></span>
       </div>
 
       <div className="dash-row">
@@ -44,27 +56,54 @@ function ProjectPage({
       <div className="divider" />
 
       <div className="members-block">
-        <div className="members-title">👥 Members</div>
+        <div className="members-title">👥 Members <span className="members-count">{selectedProject.members.length}</span></div>
         <div className="member-list">
-          {selectedProject.members.map(m => (
-            <div key={m} className="member-row">
-              <span className="pill assignee">{displayName(m)}</span>
-              <span className="member-id mono">{m}</span>
-              <input
-                className="member-name-input"
-                placeholder="Add a display name…"
-                defaultValue={nameMap[m] || ''}
-                onBlur={e => setDisplayName(m, e.target.value.trim())}
-              />
-            </div>
-          ))}
+          {selectedProject.members.map(m => {
+            const id = memberId(m)
+            const role = memberRole(m)
+            const name = displayName(id)
+            return (
+              <div key={id} className="member-row">
+                <div className="member-avatar" style={{ background: avatarColor(id) }}>
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <div className="member-main">
+                  <div className="member-name-line">
+                    <span className="member-display-name">{name}</span>
+                    {role && <span className={`pill sm role-${role}`}>{role}</span>}
+                  </div>
+                  <span className="member-id mono">ID {id}</span>
+                </div>
+                <input
+                  className="member-name-input"
+                  placeholder="Display name…"
+                  defaultValue={nameMap[id] || ''}
+                  onBlur={e => setDisplayName(id, e.target.value.trim())}
+                />
+              </div>
+            )
+          })}
         </div>
         {!isArchived && (
-          <form onSubmit={addMember} className="inline-form">
-            <input placeholder="New member ID" value={newMember}
-              onChange={e => setNewMember(e.target.value)} />
-            <button type="submit" className="btn btn-secondary sm">Add Member</button>
-          </form>
+          <div className="add-member-box">
+            <div className="add-member-title">Add a new member</div>
+            <form onSubmit={addMember} className="inline-form">
+              <label className="field-label-inline">
+                Member ID
+                <input placeholder="e.g. 1234" value={newMember}
+                  onChange={e => setNewMember(e.target.value)} />
+              </label>
+              <label className="field-label-inline role-field">
+                Role
+                <select value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)}>
+                  <option value="contributor">Contributor</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </label>
+              <button type="submit" className="btn btn-secondary sm">Add Member</button>
+            </form>
+          </div>
         )}
       </div>
 
@@ -90,7 +129,7 @@ function ProjectPage({
                   </span>
                 </div>
                 <div className="timeline-meta">
-                  members <b>{h.value.members.map(displayName).join(', ')}</b>
+                  members <b>{h.value.members.map(m => displayName(memberId(m))).join(', ')}</b>
                 </div>
               </div>
             </div>

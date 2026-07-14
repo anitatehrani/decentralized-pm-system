@@ -1,3 +1,7 @@
+// Old (pre-role) projects stored members as plain ID strings; new ones store
+// {id, role}. This tolerates either shape so past data doesn't crash the UI.
+function memberId(m) { return typeof m === 'string' ? m : m.id }
+
 function TaskPage({
   selectedProject, selectedTask, history,
   loadTaskId, setLoadTaskId, loadTaskAndHistory, loadingTask,
@@ -6,8 +10,13 @@ function TaskPage({
   assignTo, setAssignTo, assignTask,
   uploadFile, setUploadFile, uploadAndAttach, uploading,
   displayName,
+  archiveTask,
+  newComment, setNewComment, addComment,
   goTo
 }) {
+  const isOverdue = selectedTask?.dueDate && selectedTask.status !== 'done' &&
+    new Date(selectedTask.dueDate) < new Date(new Date().toDateString())
+
   return (
     <section className="card wide">
       <div className="card-header">
@@ -31,6 +40,8 @@ function TaskPage({
 
       {selectedTask && (
         <div className="task-detail">
+          {selectedTask.archived && <div className="archived-banner">🗑 This task is archived</div>}
+
           <div className="task-detail-top">
             {editMeta ? (
               <input className="edit-title-input" value={editMeta.title}
@@ -48,6 +59,13 @@ function TaskPage({
               {selectedTask.assigneeId && (
                 <span className="pill assignee">👤 {displayName(selectedTask.assigneeId)}</span>
               )}
+              {selectedTask.dueDate && (
+                <span className="pill sm" style={isOverdue
+                  ? { color: 'var(--danger)', background: 'rgba(239,68,68,0.12)' }
+                  : { color: 'var(--text-dim)', background: 'rgba(154,160,171,0.12)' }}>
+                  📅 {selectedTask.dueDate}{isOverdue ? ' (overdue)' : ''}
+                </span>
+              )}
             </div>
           </div>
 
@@ -60,6 +78,11 @@ function TaskPage({
                 <option value="medium">Medium priority</option>
                 <option value="high">High priority</option>
               </select>
+              <label className="field-label">
+                Due date
+                <input type="date" value={editMeta.dueDate}
+                  onChange={e => setEditMeta({ ...editMeta, dueDate: e.target.value })} />
+              </label>
               <div className="edit-meta-actions">
                 <button onClick={saveMeta} className="btn btn-primary sm">Save Changes</button>
                 <button onClick={() => setEditMeta(null)} className="btn btn-secondary sm">Cancel</button>
@@ -68,7 +91,7 @@ function TaskPage({
           ) : (
             <>
               <p className="preview-desc">{selectedTask.description}</p>
-              {selectedTask.status !== 'done' && (
+              {selectedTask.status !== 'done' && !selectedTask.archived && (
                 <button onClick={startEditMeta} className="btn btn-secondary sm">✎ Edit Details</button>
               )}
             </>
@@ -95,7 +118,10 @@ function TaskPage({
             <div className="assign-row">
               <select value={assignTo} onChange={e => setAssignTo(e.target.value)}>
                 <option value="">Assign to…</option>
-                {selectedProject.members.map(m => <option key={m} value={m}>{displayName(m)}</option>)}
+                {selectedProject.members.map(m => {
+                  const id = memberId(m)
+                  return <option key={id} value={id}>{displayName(id)}</option>
+                })}
               </select>
               <button onClick={assignTask} className="btn btn-accent sm" disabled={!assignTo}>Assign</button>
             </div>
@@ -124,6 +150,33 @@ function TaskPage({
                 </div>
               ))}
             </div>
+          )}
+
+          <div className="comments-block">
+            <div className="attachments-title">💬 Comments {selectedTask.comments?.length ? `(${selectedTask.comments.length})` : ''}</div>
+            {selectedTask.comments && selectedTask.comments.length > 0 && (
+              <div className="comment-list">
+                {selectedTask.comments.map((c, i) => (
+                  <div key={i} className="comment-item">
+                    <span className="comment-author">{displayName(c.authorId)}</span>
+                    <span className="comment-text">{c.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <form onSubmit={addComment} className="comment-form">
+              <input placeholder="Your ID" value={newComment.authorId}
+                onChange={e => setNewComment({ ...newComment, authorId: e.target.value })} />
+              <input placeholder="Add a comment…" value={newComment.text}
+                onChange={e => setNewComment({ ...newComment, text: e.target.value })} />
+              <button type="submit" className="btn btn-secondary sm">Post</button>
+            </form>
+          </div>
+
+          {!selectedTask.archived && (
+            <button onClick={() => archiveTask(selectedTask.taskId)} className="btn btn-danger sm archive-task-btn">
+              🗑 Archive Task
+            </button>
           )}
         </div>
       )}

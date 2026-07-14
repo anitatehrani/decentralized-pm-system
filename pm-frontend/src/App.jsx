@@ -36,7 +36,7 @@ function App() {
   const [uploading, setUploading] = useState(false)
 
   const [pForm, setPForm] = useState({ projectId: '', name: '', description: '', ownerId: '' })
-  const [tForm, setTForm] = useState({ taskId: '', title: '', description: '', priority: 'medium' })
+  const [tForm, setTForm] = useState({ taskId: '', title: '', description: '', priority: 'medium', dueDate: '' })
   const [loadProjectId, setLoadProjectId] = useState('')
   const [loadTaskId, setLoadTaskId] = useState('')
 
@@ -44,12 +44,15 @@ function App() {
   const [loadingBoard, setLoadingBoard] = useState(false)
   const [addBoardId, setAddBoardId] = useState('')
   const [newMember, setNewMember] = useState('')
+  const [newMemberRole, setNewMemberRole] = useState('contributor')
   const [projectHistory, setProjectHistory] = useState([])
   const [showProjectHistory, setShowProjectHistory] = useState(false)
   const [loadingProjHistory, setLoadingProjHistory] = useState(false)
+  const [showArchivedTasks, setShowArchivedTasks] = useState(false)
 
   const [assignTo, setAssignTo] = useState('')
   const [editMeta, setEditMeta] = useState(null)
+  const [newComment, setNewComment] = useState({ authorId: '', text: '' })
 
   // Local, browser-side directory mapping on-chain IDs -> friendly display names.
   // The ledger itself only ever stores/enforces raw IDs; this is purely cosmetic.
@@ -218,7 +221,7 @@ function App() {
     const data = await res.json()
     if (res.ok) {
       notify(`Task "${data.title}" created`)
-      setTForm({ taskId: '', title: '', description: '', priority: 'medium' })
+      setTForm({ taskId: '', title: '', description: '', priority: 'medium', dueDate: '' })
       saveBoardIds(selectedProject.projectId, [...getBoardIds(selectedProject.projectId), data.taskId])
       setBoardTasks(prev => [...prev, data])
     } else notify(data.error, 'error')
@@ -282,13 +285,14 @@ function App() {
     const res = await fetch(`${API}/projects/${selectedProject.projectId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memberId: newMember })
+      body: JSON.stringify({ memberId: newMember, role: newMemberRole })
     })
     const data = await res.json()
     if (res.ok) {
       setSelectedProject(data)
-      notify(`Member "${newMember}" added`)
+      notify(`Member "${newMember}" added as ${newMemberRole}`)
       setNewMember('')
+      setNewMemberRole('contributor')
     } else notify(data.error, 'error')
   }
 
@@ -329,11 +333,16 @@ function App() {
   }
 
   function startEditMeta() {
-    setEditMeta({ title: selectedTask.title, description: selectedTask.description, priority: selectedTask.priority })
+    setEditMeta({
+      title: selectedTask.title,
+      description: selectedTask.description,
+      priority: selectedTask.priority,
+      dueDate: selectedTask.dueDate || ''
+    })
   }
 
   async function saveMeta() {
-    const fields = ['title', 'description', 'priority']
+    const fields = ['title', 'description', 'priority', 'dueDate']
     const changed = fields.filter(f => editMeta[f] !== selectedTask[f])
     if (changed.length === 0) { setEditMeta(null); return }
     let result = selectedTask
@@ -352,6 +361,34 @@ function App() {
     setEditMeta(null)
     notify('Task updated')
     loadHistory(selectedTask.taskId)
+  }
+
+  async function archiveTask(taskId) {
+    const res = await fetch(`${API}/tasks/${taskId}`, { method: 'DELETE' })
+    const data = await res.json()
+    if (res.ok) {
+      patchBoardTask(data)
+      if (selectedTask?.taskId === taskId) setSelectedTask(data)
+      notify('Task archived')
+    } else notify(data.error, 'error')
+  }
+
+  async function addComment(e) {
+    e.preventDefault()
+    if (!selectedTask || !newComment.authorId || !newComment.text) return
+    const res = await fetch(`${API}/tasks/${selectedTask.taskId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newComment)
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setSelectedTask(data)
+      patchBoardTask(data)
+      setNewComment({ authorId: '', text: '' })
+      notify('Comment added')
+      loadHistory(selectedTask.taskId)
+    } else notify(data.error, 'error')
   }
 
   async function uploadAndAttach() {
@@ -438,7 +475,8 @@ function App() {
       {page === 'project' && (
         <ProjectPage
           selectedProject={selectedProject} isArchived={isArchived} archiveProject={archiveProject}
-          newMember={newMember} setNewMember={setNewMember} addMember={addMember}
+          newMember={newMember} setNewMember={setNewMember}
+          newMemberRole={newMemberRole} setNewMemberRole={setNewMemberRole} addMember={addMember}
           loadProjectHistory={loadProjectHistory} loadingProjHistory={loadingProjHistory}
           showProjectHistory={showProjectHistory} projectHistory={projectHistory}
           nameMap={nameMap} displayName={displayName} setDisplayName={setDisplayName}
@@ -454,6 +492,7 @@ function App() {
           loadingBoard={loadingBoard} boardTasks={boardTasks}
           statusMeta={statusMeta} priorityMeta={priorityMeta} columns={columns}
           displayName={displayName} updateStatus={updateStatus}
+          showArchivedTasks={showArchivedTasks} setShowArchivedTasks={setShowArchivedTasks}
           openTask={openTask} goTo={goTo}
         />
       )}
@@ -469,6 +508,8 @@ function App() {
           assignTo={assignTo} setAssignTo={setAssignTo} assignTask={assignTask}
           uploadFile={uploadFile} setUploadFile={setUploadFile} uploadAndAttach={uploadAndAttach} uploading={uploading}
           displayName={displayName}
+          archiveTask={archiveTask}
+          newComment={newComment} setNewComment={setNewComment} addComment={addComment}
           goTo={goTo}
         />
       )}

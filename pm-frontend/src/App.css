@@ -291,23 +291,91 @@ input:focus, textarea:focus, select:focus {
 .btn-danger:disabled { opacity: 0.3; }
 
 .members-block { margin-bottom: 16px; }
-.members-title { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; }
-.inline-form { display: flex; gap: 8px; margin-top: 10px; }
-.inline-form input { flex: 1; }
+.members-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px;
+}
+.members-count {
+  background: var(--overlay);
+  color: var(--text-dim);
+  border-radius: 10px;
+  padding: 1px 9px;
+  font-size: 11px;
+  font-weight: 600;
+}
 
-.member-list { display: flex; flex-direction: column; gap: 6px; }
+.preview-meta-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.meta-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.meta-chip b { color: var(--text); margin-left: 4px; }
+.inline-form { display: flex; gap: 10px; margin-top: 6px; align-items: flex-end; flex-wrap: wrap; }
+.inline-form input { flex: 1; min-width: 140px; }
+.inline-form .role-field { flex: 0 0 150px; }
+.inline-form .role-field select { width: 100%; }
+.inline-form > button { flex-shrink: 0; }
+
+.add-member-box {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+.add-member-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+
+.field-label-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.field-label-inline input, .field-label-inline select { margin-top: 2px; }
+
+.member-list { display: flex; flex-direction: column; gap: 8px; }
 .member-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: border-color 0.15s;
 }
-.member-id { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+.member-row:hover { border-color: var(--text-faint); }
+
+.member-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.member-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.member-name-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.member-display-name { font-weight: 600; font-size: 14px; color: var(--text); }
+.member-id { font-size: 11px; color: var(--text-faint); }
+
 .member-name-input {
-  flex: 1;
+  flex: 0 0 160px;
   background: transparent;
   border: none;
   border-bottom: 1px dashed var(--border);
@@ -315,8 +383,44 @@ input:focus, textarea:focus, select:focus {
   padding: 4px 2px;
   font-size: 12.5px;
   color: var(--text-dim);
+  text-align: right;
 }
 .member-name-input:focus { border-bottom-color: var(--accent); color: var(--text); }
+@media (max-width: 560px) {
+  .member-row { flex-wrap: wrap; }
+  .member-name-input { flex: 1 1 100%; text-align: left; }
+}
+
+.role-owner { background: rgba(168,85,247,0.15); color: #a855f7; }
+.role-admin { background: rgba(59,130,246,0.15); color: var(--info); }
+.role-contributor { background: rgba(154,160,171,0.15); color: var(--text-dim); }
+
+.comments-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.comment-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.comment-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.comment-author { font-weight: 600; color: var(--accent-hover); margin-right: 6px; }
+.comment-text { color: var(--text-dim); }
+.comment-form { display: flex; gap: 8px; }
+.comment-form input:first-child { flex: 0 0 120px; }
+.comment-form input:last-child { flex: 1; }
+
+.archive-task-btn { margin-top: 16px; }
+.kanban-card.archived-card { opacity: 0.55; }
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.field-label input { margin-top: 2px; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .stat-card {
@@ -333,6 +437,9 @@ input:focus, textarea:focus, select:focus {
 .timeline.compact { margin-top: 14px; max-height: 260px; overflow-y: auto; }
 
 /* ── kanban board ─────────────────────────────────────────────────────── */
+.filter-bar { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.filter-bar select { width: auto; min-width: 140px; }
+
 .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
 @media (max-width: 720px) { .kanban { grid-template-columns: 1fr; } }
 .kanban-col {

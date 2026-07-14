@@ -115,11 +115,11 @@ app.get('/projects/:id', async (req, res) => {
 
 // POST /projects/:id/members — add a member
 app.post('/projects/:id/members', async (req, res) => {
-    const { memberId } = req.body;
-    if (!memberId) return res.status(400).json({ error: 'Missing: memberId' });
+    const { memberId, role } = req.body;
+    if (!memberId || !role) return res.status(400).json({ error: 'Missing: memberId, role' });
     try {
         const { gateway, contract } = await connectFabric();
-        const result = await contract.submitTransaction('addProjectMember', req.params.id, memberId);
+        const result = await contract.submitTransaction('addProjectMember', req.params.id, memberId, role);
         gateway.close();
         res.json(parseResult(result));
     } catch (err) {
@@ -155,13 +155,13 @@ app.delete('/projects/:id', async (req, res) => {
 
 // POST /tasks — create a task
 app.post('/tasks', async (req, res) => {
-    const { taskId, projectId, title, description, priority } = req.body;
+    const { taskId, projectId, title, description, priority, dueDate } = req.body;
     if (!taskId || !projectId || !title || !description || !priority) {
         return res.status(400).json({ error: 'Missing: taskId, projectId, title, description, priority' });
     }
     try {
         const { gateway, contract } = await connectFabric();
-        const result = await contract.submitTransaction('createTask', taskId, projectId, title, description, priority);
+        const result = await contract.submitTransaction('createTask', taskId, projectId, title, description, priority, dueDate || '');
         gateway.close();
         res.status(201).json(parseResult(result));
     } catch (err) {
@@ -216,6 +216,32 @@ app.put('/tasks/:id/meta', async (req, res) => {
     try {
         const { gateway, contract } = await connectFabric();
         const result = await contract.submitTransaction('updateTaskMeta', req.params.id, field, value);
+        gateway.close();
+        res.json(parseResult(result));
+    } catch (err) {
+        res.status(500).json({ error: formatError(err) });
+    }
+});
+
+// DELETE /tasks/:id — archive (soft-delete) a task
+app.delete('/tasks/:id', async (req, res) => {
+    try {
+        const { gateway, contract } = await connectFabric();
+        const result = await contract.submitTransaction('archiveTask', req.params.id);
+        gateway.close();
+        res.json(parseResult(result));
+    } catch (err) {
+        res.status(500).json({ error: formatError(err) });
+    }
+});
+
+// POST /tasks/:id/comments — add a comment
+app.post('/tasks/:id/comments', async (req, res) => {
+    const { authorId, text } = req.body;
+    if (!authorId || !text) return res.status(400).json({ error: 'Missing: authorId, text' });
+    try {
+        const { gateway, contract } = await connectFabric();
+        const result = await contract.submitTransaction('addComment', req.params.id, authorId, text);
         gateway.close();
         res.json(parseResult(result));
     } catch (err) {
